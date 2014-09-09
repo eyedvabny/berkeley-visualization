@@ -2,5 +2,7 @@
 .Rhistory
 
 # R data files from past sessions
+# I don't like storing Rproj since they are generic
+*.Rproj
 .Rdata
 .Rproj.user
