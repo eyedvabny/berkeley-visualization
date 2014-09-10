@@ -6,15 +6,20 @@ library(ggplot2)
 # (http://vis.berkeley.edu/courses/cs294-10-fa14/wiki/images/8/8d/Disasters_killed_over_100.csv.zip)
 disasters <- read.csv('disasters_killed_over100.csv',stringsAsFactors=FALSE)
 
+# Load in an auxillary dataset which matches countries to continents
+# Taken from the same EM-DAT database as the original set
+continent_country <- read.csv('continent_country.csv',stringsAsFactors=FALSE)
+
+# Perform a left-join to insert the continents into the disaster data
+disasters <- left_join(disasters,continent_country,by='Country')
+
 # Some data cleaning
 disasters <- within(disasters,{
-    # Numbers are too high and cause an overflow; reduce
-    Cost_dollars <- Cost_dollars/1000
 
     # As some others have pointed out, this really means Famine
     Type[Type=='Complex Disasters'] <- 'Famine'
 
-    # Apparently Tsunamis cause earthquakes
+    # Earthquakes cause tsunamis, but deathtoll is due to different causes
     Type[Sub_Type == 'Earthquake (ground shaking)'] <- 'Earthquake'
     Type[Sub_Type == 'Tsunami'] <- 'Tsunami'
 
@@ -28,23 +33,35 @@ disasters <- within(disasters,{
 
     # Group all accidents
     Type[grep("accident",Type,ignore.case = TRUE)] <- 'Accident'
-
-
 })
-
-test <- arrange(disasters,Type,Sub_Type)
 
 # We want to do some summarizing
 disaster_impact <- disasters %>%
-    group_by(Type,Country) %>%
-    summarize(
-        deathToll = sum(Killed,na.rm=TRUE),
-        dollarCost = sum(Cost_dollars,na.rm=TRUE)
-    ) %>%
-    mutate(
-        humanCost = sum(deathToll),
-        materialCost = sum(dollarCost)
-    ) %>%
-    arrange(
-        desc(humanCost),desc(deathToll)
-    )
+    group_by(Continent,Type) %>%
+    summarize(deathToll = sum(Killed,na.rm=TRUE))
+
+# Convert the continents and disasters to factors
+disaster_impact$Continent <- factor(disaster_impact$Continent)
+disaster_impact$Type <- factor(disaster_impact$Type)
+
+# Plot this whole mess
+png(filename="disaster_impact_by_continent.png",
+    width=960,height=960,bg="transparent")
+
+ggplot(disaster_impact, aes(x=Continent,y=deathToll,fill=Type)) +
+    geom_bar(width=1,stat='identity',position='fill')+
+    coord_polar()+
+    ggtitle("Relative Population Impact of Natural Disasters, 1900-2008")+
+    xlab("") + ylab("") +
+    theme(
+        text = element_text(size=20),
+        plot.background = element_blank(),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),
+        panel.border = element_blank(),
+        legend.background = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(face='bold'))
+
+dev.off()
