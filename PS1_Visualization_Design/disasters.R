@@ -11,47 +11,69 @@ disasters <- read.csv('disasters_killed_over100.csv', stringsAsFactors = FALSE)
 
 # Load in an auxillary dataset which matches countries to continents
 # Taken from the same EM-DAT database as the original set
-continent.country <- read.csv('continent_country.csv', stringsAsFactors = FALSE)
+continents.country <- read.csv('continent_country.csv', stringsAsFactors = FALSE)
 
 # Perform a left-join to insert the continents into the disaster data
-disasters <- left_join(disasters, continent.country, by = 'Country')
+disasters <- left_join(disasters, continents.country, by = 'Country')
 
 # Some data cleaning
 disasters <- within(disasters,{
 
-    # As some others have pointed out, this really means Famine
-    Type[Type == 'Complex Disasters'] <- 'Famine'
+    # Complex causes
+    Type[Type == 'Complex Disasters'] <- 'Complex'
 
-    # Earthquakes cause tsunamis, but deathtoll is due to different causes
-    Type[Sub_Type == 'Earthquake (ground shaking)'] <- 'Earthquake'
-    Type[Sub_Type == 'Tsunami'] <- 'Tsunami'
+    # Biological causes
+    Type[Type == 'Epidemic'] <- 'Biological'
 
-    # Extreme temperatures have two extremes
-    Type[Sub_Type == 'Cold wave'] <- 'Extreme Cold'
-    Type[Sub_Type == 'Extreme winter conditions'] <- 'Extreme Cold'
-    Type[Sub_Type == 'Heat wave'] <- 'Extreme Hot'
+    # Climatological causes
+    Type[Type %in%
+             c('Drought','Extreme temperature','Wildfire')
+         ] <- 'Climatological'
 
-    # Really stupid name for a disaster; most are landslides
-    Type[grep('mass movement', Type, ignore.case = TRUE)] <- 'Landslide'
+    # Geophysical causes
+    Type[Type %in%
+             c('Earthquake (seismic activity)','Mass movement dry','Volcano')
+         ] <- 'Geophysical'
 
-    # Group all accidents
-    Type[grep('accident', Type, ignore.case = TRUE)] <- 'Accident'
+    # Hydrological causes
+    Type[Type %in%
+             c('Flood','Mass Movement Wet','Mass movement wet')
+         ] <- 'Hydrological'
+
+    # Meteorolical causes
+    Type[Type == 'Storm'] <- 'Meteorolical'
+
+    # Technological causes
+    Type[grep('accident', Type, ignore.case = TRUE)] <- 'Technological'
 })
 
 # We want to do some summarizing
-disaster.impact <- disasters %>%
+disasters.impact <- disasters %>%
     group_by(Continent, Type) %>%
     summarize(deathToll = sum(Killed, na.rm = TRUE))
+
+# Add on average continent size
+continents.size <- data.frame(
+                    Continent = c('Oceania', 'Africa', 'Americas', 'Europe', 'Asia'),
+                    Pop_fraction = c(0.01, 0.11, 0.14, 0.16, 0.58))
+disasters.impact <- left_join(disasters.impact, continents.size, by = 'Continent')
+
+# Assign continents as factors to ensure ordering by size
+disasters.impact$Continent <- factor(disasters.impact$Continent,
+                                    levels = c('Oceania','Africa','Americas','Europe','Asia'),
+                                    ordered = TRUE)
+disasters.impact$Type <- factor(disasters.impact$Type)
 
 # Plot this whole mess
 png(filename = "disaster_impact_by_continent.png",
     width = 960, height = 960, bg = "transparent")
 
-ggplot(disaster.impact,
-       aes(x = factor(Continent), y = deathToll, fill= factor(Type)) +
-geom_bar(width=1,stat='identity',position='fill') +
-coord_polar() +
-ggtitle("Relative Population Impact of Natural Disasters, 1900-2008") +
+ggplot(disasters.impact,
+       aes(x = Continent, y = deathToll, fill = Type)) +
+geom_bar(width=0.9,stat='identity',position='fill') +
+coord_polar("y") +
+scale_fill_brewer(type = 'qual',palette = 2) +
+ggtitle("Relative Population Impact of Disasters, 1900-2008") +
 xlab("") +
 ylab("") +
 theme(
@@ -61,9 +83,9 @@ theme(
    panel.grid = element_blank(),
    panel.border = element_blank(),
    legend.background = element_blank(),
-   axis.ticks.y = element_blank(),
-   axis.text.y = element_blank(),
-   axis.text.x = element_text(face='bold')
+   axis.ticks.x = element_blank(),
+   axis.text.x = element_blank(),
+   axis.text.y = element_text(face='bold')
 )
 
 dev.off()
