@@ -1,8 +1,11 @@
-.regular {
+circle.regular {
 	fill: black;
 }
 
-.selected {
+circle.selected {
 	fill: red;
 }
 
+circle:hover {
+	fill: orange;
+}
