@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<meta charset="utf-8" />
+
+<link rel="stylesheet" href="hard_sphere.css" type="text/css" media="screen" />
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+<title>Hard-Sphere Simulation</title>
+<body>
+    <h1>Hard-Sphere Simulation</h1>
+
+    <!-- Controls -->
+    <div id="controls">
+        <label for"density">Density:</label>
+        <input type="range" id="density" min="0" max="1000" step="10" />
+        <label for="density"><span id="density_value"></span></label>
+    </div>
+    
+    <!-- Now that the page is built, load the scripts --> 
+    <script src="hard_sphere.js"></script>
+</body>
