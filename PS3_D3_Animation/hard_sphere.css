@@ -1,3 +1,7 @@
+h1 {
+	text-align: center;
+}
+
 circle.regular {
 	fill: black;
 }
@@ -6,6 +10,16 @@ circle.selected {
 	fill: red;
 }
 
+circle.grouped {
+    stroke: red;
+}
+
 circle:hover {
 	fill: orange;
+}
+
+.brush .extent {
+  fill-opacity: .1;
+  stroke: #fff;
+  shape-rendering: crispEdges;
 }
