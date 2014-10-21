@@ -2,7 +2,7 @@ h1 {
 	text-align: center;
 }
 
-circle.regular {
+circle {
 	fill: black;
 }
 
@@ -20,6 +20,22 @@ circle:hover {
 
 .brush .extent {
   fill-opacity: .1;
-  stroke: #fff;
+  stroke: grey;
   shape-rendering: crispEdges;
+}
+
+rect.bar {
+  fill: steelblue;
+  shape-rendering: crispEdges;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke: black;
+  shape-rendering: crispEdges;
+}
+
+.distance {
+  stroke: red;
+  stroke-width: 2;
 }
