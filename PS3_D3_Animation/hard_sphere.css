@@ -39,3 +39,12 @@ rect.bar {
   stroke: red;
   stroke-width: 2;
 }
+
+.label.heading{
+  font-size: 130%;
+}
+
+.label.grouped {
+  fill: green;
+}
+

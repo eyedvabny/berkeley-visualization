@@ -4,6 +4,7 @@
 var radius = 5; // Pixel radius of a particle
 var dim = 500; // Dimension of the canvas (square)
 var K = 500; // Temperature of the system
+var kb = 1.0 // Boltzmann constant used for Temp calculation
 
 //
 // GLOBAL VARIABLES
@@ -42,10 +43,10 @@ var Particle = function (){
 
     // Set the position, radius, and velocity
     this.x = temp_x;
-    this.dx = d3.random.normal(0,Math.sqrt(K))();
+    this.dx = d3.random.normal(0,Math.sqrt(kb*K))();
 
     this.y = temp_y;
-    this.dy = d3.random.normal(0,Math.sqrt(K))();
+    this.dy = d3.random.normal(0,Math.sqrt(kb*K))();
     
     this.r = radius;
 }
@@ -53,12 +54,6 @@ var Particle = function (){
 //
 // FUNCTIONS
 //
-
-// Update the density text label
-function update_dens_label(n){
-  d3.select("#num_parts").attr("value",n);
-  d3.select("#num_parts_value").text(n);
-}
 
 // Update the list of particles
 function update_particle_list(n){
@@ -108,9 +103,13 @@ function toggle_distance_line(){
               .attr("y1",selected[0].y)
               .attr("x2",selected[1].x)
               .attr("y2",selected[1].y);
+
+    text_data.select("#label_distance").text("Interparticle Distance: "+distance().toFixed(2));
   } else {
     simulation.select("line.distance")
               .remove();
+
+    text_data.select("#label_distance").text("");
   }
 }
 
@@ -123,7 +122,6 @@ function distance(){
     return Math.sqrt( (p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y) );
   }
 }
-
 
 // Calculate the density of the system
 // If brushing - return density of selection
@@ -143,18 +141,24 @@ function density(){
   }
 }
 
+// Calculate the temperature of the system
+// If brushing - return density of selection
+// If no selection - return density of whole system
 function temperature(){
   var data;
   if(!brush.empty()){
     data = points.filter(".grouped").data();
-
   }else{
     data = particles;
   }
 
-  data.map();
-
+  var vx2,vy2,v2sum
+  vx2=data.map(function(d){return d.dx * d.dx});
+  vy2=data.map(function(d){return d.dy * d.dy});
+  v2sum=d3.sum(vx2)+d3.sum(vy2);
+  return v2sum/(2*(vx2.length)*kb);
 }
+
 
 // Clear all selections when adjusting the
 // number of particles in the simulation
@@ -239,10 +243,20 @@ function redraw_histogram(){
                   );
 }
 
+// Update labels for single-valued properties
 function update_labels(){
-  text_data.select("#label_density").text("Density: " + density());
-  text_data.select("#label_temperature").text("Temperature: " + density());
-  text_data.select("#label_velocity").text("Average Velocity: " + density());
+  
+  // Choose a heading based off the selection
+  if (!brush.empty()){
+    text_data.select("#label_heading").text("Statistics for the selected ensemble:").classed("grouped",true);
+  }else {
+    text_data.select("#label_heading").text("Statistics for the complete ensemble:").classed("grouped",false);
+  }
+  
+  // Incorporate the current labels
+  text_data.select("#label_density").text("Density: " + density().toFixed(2));
+  text_data.select("#label_temperature").text("Temperature: " + temperature().toFixed(2));
+  text_data.select("#label_velocity").text("Root Mean Square Velocity: " + Math.sqrt(2*temperature()).toFixed(2));
 }
 
 // Highlight brushed points
@@ -262,6 +276,12 @@ function is_unblocked(x,y){
   return function(elem){
     return (4*radius*radius) < (elem.x-x)*(elem.x-x) + (elem.y-y)*(elem.y-y);
   }
+}
+
+// Update the density text label
+function update_particle_label(n){
+  d3.select("#num_parts").attr("value",n);
+  d3.select("#num_parts_value").text(n);
 }
 
 //
@@ -334,38 +354,42 @@ ener_histogram.append("g")
                   
 // Text box for single-valued updates      
 text_data = sideinfo.append("g")
-                    .attr("transform", "translate(" + text_margin.left + "," + text_margin.top + ")")
+                    .attr("transform", "translate(" + text_margin.left + "," + text_margin.top + ")");
+
 text_data.append("text")
          .attr("class","label heading")
          .attr("id","label_heading")
          .attr("text-anchor","middle")
-         .attr("y",20)
-         .attr("x",text_dims.width/2)
-         .text("Statistics for the complete ensemble:");
+         .attr("y",50)
+         .attr("x",text_dims.width/2);
 
 text_data.append("text")
          .attr("class","label")
          .attr("id","label_density")
          .attr("text-anchor","left")
-         .attr("y",50)
-         .attr("x",15)
-         .text("Density:");
+         .attr("y",80)
+         .attr("x",15);
 
 text_data.append("text")
          .attr("class","label")
          .attr("id","label_temperature")
          .attr("text-anchor","left")
-         .attr("y",70)
-         .attr("x",15)
-         .text("Temperature:");
+         .attr("y",100)
+         .attr("x",15);
 
 text_data.append("text")
          .attr("class","label")
          .attr("id","label_velocity")
          .attr("text-anchor","left")
-         .attr("y",90)
-         .attr("x",15)
-         .text("Average Velocity:");
+         .attr("y",120)
+         .attr("x",15);
+
+text_data.append("text")
+         .attr("class","label")
+         .attr("id","label_distance")
+         .attr("text-anchor","left")
+         .attr("y",140)
+         .attr("x",15);
 
 // Brush for point selection
 brush = d3.svg.brush()
@@ -385,7 +409,7 @@ var slider = d3.select("#num_parts")
                .attr("max",max_particles)
                .style("width",(0.75*dim).toString()+"px")
                .call(function(){
-                  update_dens_label(init_num_particles);
+                  update_particle_label(init_num_particles);
                   update_particle_list(init_num_particles);
                   redraw_particles();
                   redraw_histogram();
@@ -393,7 +417,7 @@ var slider = d3.select("#num_parts")
                })
                .on("input",function(){
                   clear_selected();
-                  update_dens_label(this.value);
+                  update_particle_label(this.value);
                   update_particle_list(this.value);
                   redraw_particles();
                   redraw_histogram();
